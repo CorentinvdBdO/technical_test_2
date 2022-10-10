@@ -1,0 +1,34 @@
+4) Une policy est une fonction Pi(S)->A qui représente le choix qu'un agent va effectuer dans un état donné de l'environnement.
+Notre objectif est de trouver une policy qui maximise la récompense de l'agent sur une partie.
+Décrivez (sans implémentation pour le moment) quel algorithme vous utiliseriez pour résoudre ce problème (sans reinforcement learning).
+
+Une policy naive qui me paraît simple bien que probablement non optimale est celle que j'appellerai "de la main droite". L'idée est que lorsque l'on est dans un labyrinthe, on peut marcher en gardant toujours la main droite collée au mur. On finira toujours par arriver à la sortie pourvu que le labyrinthe reste 2D sans chevauchement entre mur et passages. Evidemment la solution est symétrique et l'on peut utiliser la méthode de la main gauche.
+
+L'idée est donc de toujours tenter de tourner à droite, si impossible, aller tout droit, si impossible, aller à gauche, si impossible, rebrousser chemin d'une case. Chaque mur identifié est conservé comme une case où ne jamais aller et chaque case déjà utilisée est conservée comme une case où ne jamais aller sauf pour rebrousser chemin. La droite est définie par la case depuis laquelle l'agent est arrivé.
+
+¤ ¤ ¤ ¤ ¤ O ¤ ¤ ¤ ¤
+¤ ¤ ¤ ¤     ¤ ¤ ¤ ¤
+¤ ¤ ¤ ¤   ¤ ¤ ¤ ¤ ¤
+¤ ¤ ¤ ¤     ¤ ¤ ¤ ¤
+¤ ¤ ¤ ¤ ¤   ¤ ¤ ¤ ¤
+    ¤ ¤ ¤   ¤ ¤ ¤ ¤
+¤   ¤ ¤ ¤   ¤ ¤ ¤ ¤
+¤           ¤ ¤ ¤ ¤
+¤ ¤ ¤ ¤ ¤ ¤ ¤ ¤ ¤ ¤
+¤ ¤ ¤ ¤ ¤ ¤ ¤ ¤ ¤ ¤
+Cas 1 "dense"
+L'agent va rencontrer de nombreux murs sur le chemin et finir part trouver la sortie
+
+                ¤
+      ¤
+
+
+O       ¤     ¤
+              ¤
+¤     ¤
+              ¤
+        ¤         ¤
+Cas 2 "vide"
+L'agent va longer le bord de la carte jusqu'à trouver la sortie
+
+La connaissance des dimensions de la carte permet en plus d'éviter tous les tests sur les bords de la carte.
