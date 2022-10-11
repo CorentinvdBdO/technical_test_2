@@ -1,5 +1,5 @@
 import numpy as np
-from random import sample, choice
+from random import sample, choice, randint
 from json import dump, load
 
 
@@ -62,7 +62,6 @@ class Map:
         possible_cells.remove(self.exit_coordinates)
 
         self.enemy_starting_coordinates = sample(possible_cells, min(n_enemies, len(possible_cells)))
-
 
     def surrounding_cells_coordinates(self, coordinates):
         cells_coordinate = []
@@ -181,12 +180,12 @@ class QSearcherPlayer:
         d = self.q_grid_dict[coordinates[0]][coordinates[1]]
         return max(d, key=d.get)
 
-
 class Environment:
     HAUT = 'H'
     BAS = 'B'
     DROITE = 'D'
     GAUCHE = 'G'
+    action_list = [HAUT, DROITE, BAS, GAUCHE]
     gamma = 0.5
     base_reward = -1
     wall_reward = -5
@@ -215,7 +214,7 @@ class Environment:
         return new_coordinates
 
     def step(self, action):
-        if action not in [self.HAUT, self.BAS, self.DROITE, self.GAUCHE]:  # Action error
+        if action not in self.action_list:  # Action error
             print('Wrong action')
             return self.agent_coordinates, 0, 0
 
@@ -307,6 +306,8 @@ class Environment:
     def q_star_grid_dict(self):
         """
         m x n matrix containing a dictionary per cell whose keys are the possible actions
+        Initialized at -200 for walls and cells stuck
+        Computed with the optimal policy
         """
         grid_dict = []
         remaining_q_sum = np.ones((self.map.m, self.map.n)) * self.min_score
@@ -326,20 +327,51 @@ class Environment:
             for y in range(0, self.map.n):
                 grid_dict[-1] += [{}]
                 if remaining_q_sum[(x, y)] == self.min_score:    # Is a wall/stuck -> minimal score
-                    for action in [self.HAUT, self.BAS, self.GAUCHE, self.DROITE]:
+                    for action in self.action_list:
                         grid_dict[-1][-1][action] = self.min_score
                 elif (x, y) == self.map.exit_coordinates:       # Is the exit point -> maximal score
-                    for action in [self.HAUT, self.BAS, self.GAUCHE, self.DROITE]:
+                    for action in self.action_list:
                         grid_dict[-1][-1][action] = self.exit_reward
                 else:                                        # Is not a wall nor the exit
-                    for action in [self.HAUT, self.BAS, self.GAUCHE, self.DROITE]:
+                    for action in self.action_list:
                         self.agent_coordinates = (x, y)
                         self.score = 0
                         new_coordinates, reward, finished = self.step(action)
                         grid_dict[-1][-1][action] = reward + remaining_q_sum[new_coordinates]
         return grid_dict
 
+    def q_iterative_grid_dict_player(self, learning_rate=0.1, number_iterations=100):
+        """
+        m x n matrix containing a dictionary per cell whose keys are the possible actions
+        Initialized at 0 everywhere
+        A player tries to follow the Q value for a game and update it each move
+        """
+
+        grid_dict = [[{action: 0 for action in self.action_list} for y in range(self.map.n)] for x in range(self.map.m)]
+        for iteration in range(number_iterations):
+            starting_position = (randint(0, self.map.m - 1), randint(0, self.map.n - 1))
+            self.reset()
+            self.agent_coordinates = starting_position
+            self.player = QSearcherPlayer(grid_dict)
+            end = 0
+            reward = self.score
+            self.path_taken += [self.agent_coordinates]
+            while end == 0:
+                action = self.player.play(self.agent_coordinates, reward)
+                new_coordinates, reward, end = self.step(action)
+                grid_dict[self.path_taken[-1][0]][self.path_taken[-1][1]][action] += learning_rate * (
+                    reward + self.gamma * (max(grid_dict[new_coordinates[0]][new_coordinates[1]].values())
+                                           - grid_dict[self.path_taken[-1][0]][self.path_taken[-1][1]][action])
+                )
+                self.path_taken += [new_coordinates]
+        return grid_dict
+
     def q_iterative_grid_dict(self, learning_rate=0.1, number_iterations=100):
+        """
+        m x n matrix containing a dictionary per cell whose keys are the possible actions
+        Initialized at -200 for walls
+        Every cell make all possible action, update Q
+        """
         # Initialize: start everywhere and make every possible move
         grid_dict = []
         for x in range(0, self.map.m):
@@ -347,23 +379,22 @@ class Environment:
             for y in range(0, self.map.n):
                 grid_dict[-1] += [{}]
                 if self.map.grid[(x, y)]:                                          # Is a wall
-                    for action in [self.HAUT, self.BAS, self.GAUCHE, self.DROITE]:
+                    for action in self.action_list:
                         grid_dict[-1][-1][action] = self.min_score
                 elif (x, y) == self.map.exit_coordinates:                          # Is the exit
-                    for action in [self.HAUT, self.BAS, self.GAUCHE, self.DROITE]:
+                    for action in self.action_list:
                         grid_dict[-1][-1][action] = self.exit_reward
                 else:
-                    for action in [self.HAUT, self.BAS, self.GAUCHE, self.DROITE]:
+                    for action in self.action_list:
                         self.agent_coordinates = (x, y)
                         self.score = 0
                         new_coordinates, reward, finished = self.step(action)
                         grid_dict[-1][-1][action] = reward
-
         for iteration in range(number_iterations):
             new_grid_dict = grid_dict.copy()
             for x in range(0, self.map.m):
                 for y in range(0, self.map.n):
-                    for action in [self.HAUT, self.BAS, self.GAUCHE, self.DROITE]:
+                    for action in self.action_list:
 
                         self.agent_coordinates = (x, y)
                         self.score = 0
@@ -373,6 +404,7 @@ class Environment:
                             reward + self.gamma * (max(grid_dict[new_coordinates[0]][new_coordinates[1]].values())
                                                    - grid_dict[x][y][action]))
             grid_dict = new_grid_dict
+
         return grid_dict
 
 

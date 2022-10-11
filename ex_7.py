@@ -13,7 +13,7 @@ if __name__ == '__main__':
     print(q_star_grid)
 
     print("Iterative Q")
-    q_iterative_grid = env.q_iterative_grid_dict()
+    q_iterative_grid = env.q_iterative_grid_dict_player(learning_rate=0.5, number_iterations=1000)
     print(q_iterative_grid)
 
     env.player = QSearcherPlayer(q_star_grid)
