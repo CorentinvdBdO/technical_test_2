@@ -1,8 +1,8 @@
-from main import Map, Environment, random_player
+from main import Map, Environment,  RandomPlayer
 
 if __name__ == '__main__':
     map = Map(10, 15, 60, Map.NO_ADJACENT)
-    env = Environment(map, random_player)
+    env = Environment(map)
     print('Starting position')
     env.render()
 

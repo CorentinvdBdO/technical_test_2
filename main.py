@@ -30,7 +30,7 @@ class Map:
                      if cell not in self.border_cells]
         if next_cell:  # A border starting point
             self.path += next_cell
-        else:  # A corner starting point
+        else:          # A corner starting point
             self.path += sample(self.immediately_surrounding_cells_coordinates(self.entry_coordinates), 1)
             self.path += [cell for cell in self.surrounding_cells_coordinates(self.entry_coordinates)
                           if cell not in self.border_cells]
@@ -64,6 +64,9 @@ class Map:
         self.enemy_starting_coordinates = sample(possible_cells, min(n_enemies, len(possible_cells)))
 
     def surrounding_cells_coordinates(self, coordinates):
+        """
+        Return the coordinates of the up to 8 cells around the coordinates
+        """
         cells_coordinate = []
         for x in range(max(0, coordinates[0] - 1), min(self.m, coordinates[0] + 2)):
             for y in range(max(0, coordinates[1] - 1), min(self.n, coordinates[1] + 2)):
@@ -72,6 +75,9 @@ class Map:
         return cells_coordinate
 
     def immediately_surrounding_cells_coordinates(self, coordinates):
+        """
+        Return the coordinates of the up to 4 cells immediately adjacent to the coordinates
+        """
         cells_coordinate = []
         for x in range(max(0, coordinates[0] - 1), min(self.m, coordinates[0] + 2)):
             if x != coordinates[0]:
@@ -82,11 +88,17 @@ class Map:
         return cells_coordinate
 
     def path_generator_true_random(self):
+        """
+        Generate a random path that can go back on itself
+        """
         while self.path[-1] not in self.border_cells:
             self.path += sample(self.immediately_surrounding_cells_coordinates(self.path[-1]), 1)
         return
 
     def path_generator_random_no_crossover(self):
+        """
+        Generate a random path that cannot use twice the same cell
+        """
         initial_path = self.path.copy()
         while self.path[-1] not in self.border_cells:
             possible_next_cells = [cell for cell in self.immediately_surrounding_cells_coordinates(self.path[-1])
@@ -100,6 +112,9 @@ class Map:
         return
 
     def path_generator_random_no_adjacent(self):
+        """
+        Generate a path that cannot have more than two cells ajacent to each others
+        """
         initial_path = self.path.copy()
         forbidden_cells = self.path.copy()
         for cell in self.path[:-2]:
@@ -119,7 +134,8 @@ class Map:
 
     def get_proximity_classes(self, starting_coordinates, ending_coordinates=(-1, -1)):
         """
-        return a list of list, from the cell, to cells within distance 1, to cells within distance 2....
+        return a list of lists of coordinates:
+        [[starting cell], [cells within distance 1], [cells within distance 2] ...]
         walls block this propagation
         If ending coordinates are given, will not stop when reached
         """
@@ -168,11 +184,17 @@ class Map:
 
 
 class RandomPlayer:
+    """
+    A player that makes random decisions
+    """
     def play(self, coordinates, reward):
-        return choice([Environment.GAUCHE, Environment.DROITE, Environment.HAUT, Environment.BAS])
+        return choice(Environment.action_list)
 
 
 class QSearcherPlayer:
+    """
+    A player that looks at a Q grid of dictionaries to determine the best action
+    """
     def __init__(self, q_grid_dict):
         self.q_grid_dict = q_grid_dict
 
@@ -233,7 +255,7 @@ class Environment:
         if not 0 <= new_coordinates[0] <= self.map.m - 1 \
                 or not 0 <= new_coordinates[1] <= self.map.n - 1 \
                 or self.map.grid[new_coordinates] == 1:              # Outside or a wall
-            self.score += self.wall_reward
+            self.score += self.wall_reward + self.base_reward
             new_coordinates = self.agent_coordinates
             reward = self.wall_reward + self.base_reward
             game_over = 0
